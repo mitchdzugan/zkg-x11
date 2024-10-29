@@ -34,7 +34,7 @@ void grab(void)
 	for (hotkey_t *hk = hotkeys_head; hk != NULL; hk = hk->next)
 		grab_chord(hk->chain->head);
 	*/
-	xcb_grab_keyboard(dpy, true, root, XCB_CURRENT_TIME, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
+	xcb_grab_keyboard(dpy, false, root, XCB_CURRENT_TIME, XCB_GRAB_MODE_SYNC, XCB_GRAB_MODE_ASYNC);
 	xcb_flush(dpy);
 	grabbed = true;
 }

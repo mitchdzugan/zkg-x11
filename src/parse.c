@@ -2415,7 +2415,7 @@ void load_config(const char *config_file)
 	fclose(cfg);
 }
 
-void parse_event(xcb_generic_event_t *evt, uint8_t event_type, xcb_keysym_t *keysym, xcb_button_t *button, uint16_t *modfield)
+void parse_event(xcb_generic_event_t *evt, uint8_t event_type, xcb_keysym_t *keysym, uint16_t *modfield)
 {
 	if (event_type == XCB_KEY_PRESS) {
 		xcb_key_press_event_t *e = (xcb_key_press_event_t *) evt;
@@ -2429,16 +2429,6 @@ void parse_event(xcb_generic_event_t *evt, uint8_t event_type, xcb_keysym_t *key
 		*modfield = e->state & ~modfield_from_keycode(keycode);
 		*keysym = xcb_key_symbols_get_keysym(symbols, keycode, 0);
 		PRINTF("key release %u %x %d %u\n", keycode, *keysym, (*keysym) == 65307, *modfield);
-	} else if (event_type == XCB_BUTTON_PRESS) {
-		xcb_button_press_event_t *e = (xcb_button_press_event_t *) evt;
-		*button = e->detail;
-		*modfield = e->state;
-		PRINTF("button press %u %u\n", *button, *modfield);
-	} else if (event_type == XCB_BUTTON_RELEASE) {
-		xcb_button_release_event_t *e = (xcb_button_release_event_t *) evt;
-		*button = e->detail;
-		*modfield = e->state;
-		PRINTF("button release %u %u\n", *button, *modfield);
 	}
 }
 

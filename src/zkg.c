@@ -69,12 +69,11 @@ int main(int argc, char *argv[])
 	status_fifo = NULL;
 	config_path = NULL;
 	mapping_count = 0;
-	timeout = TIMEOUT;
+	timeout = 0;
 	grabbed = false;
 	redir_fd = -1;
 	abort_keysym = ESCAPE_KEYSYM;
 
-	alarm(5);
 	while ((opt = getopt(argc, argv, "hvm:t:c:r:s:a:")) != -1) {
 		switch (opt) {
 			case 'v':
@@ -82,26 +81,11 @@ int main(int argc, char *argv[])
 				exit(EXIT_SUCCESS);
 				break;
 			case 'h':
-				printf("zkg [-h|-v|-m COUNT|-t TIMEOUT|-c CONFIG_FILE|-r REDIR_FILE|-s STATUS_FIFO|-a ABORT_KEYSYM] [EXTRA_CONFIG ...]\n");
+				printf("zkg [-h|-v|-t TIMEOUT|-a ABORT_KEYSYM]\n");
 				exit(EXIT_SUCCESS);
-				break;
-			case 'm':
-				if (sscanf(optarg, "%i", &mapping_count) != 1)
-					warn("Can't parse mapping count.\n");
 				break;
 			case 't':
 				timeout = atoi(optarg);
-				break;
-			case 'c':
-				config_path = optarg;
-				break;
-			case 'r':
-				redir_fd = open(optarg, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-				if (redir_fd == -1)
-					warn("Failed to open the command redirection file.\n");
-				break;
-			case 's':
-				fifo_path = optarg;
 				break;
 			case 'a':
 				if (!parse_keysym(optarg, &abort_keysym)) {
@@ -111,16 +95,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	num_extra_confs = argc - optind;
-	extra_confs = argv + optind;
-
-	if (fifo_path != NULL) {
-		int fifo_fd = open(fifo_path, O_RDWR | O_NONBLOCK);
-		if (fifo_fd != -1) {
-			status_fifo = fdopen(fifo_fd, "w");
-		} else {
-			warn("Couldn't open status fifo.\n");
-		}
+	if (timeout > 0) {
+		alarm(timeout);
 	}
 
 	signal(SIGINT, hold);
@@ -133,12 +109,6 @@ int main(int argc, char *argv[])
 	setup();
 	get_standard_keysyms();
 	get_lock_fields();
-	abort_chord = make_chord(abort_keysym, XCB_NONE, 0, XCB_KEY_PRESS, false, false);
-	/*
-	load_config(config_file);
-	for (int i = 0; i < num_extra_confs; i++)
-		load_config(extra_confs[i]);
-	*/
 	grab();
 
 	xcb_generic_event_t *evt;
@@ -153,26 +123,29 @@ int main(int argc, char *argv[])
 
 	while (running) {
 		FD_ZERO(&descriptors);
+		FD_SET(STDIN_FILENO, &descriptors);
 		FD_SET(fd, &descriptors);
 
 		if (select(fd + 1, &descriptors, NULL, NULL, NULL) > 0) {
-			while ((evt = xcb_poll_for_event(dpy)) != NULL) {
-				uint8_t event_type = XCB_EVENT_RESPONSE_TYPE(evt);
-				switch (event_type) {
-					case XCB_KEY_PRESS:
-					case XCB_KEY_RELEASE:
-					case XCB_BUTTON_PRESS:
-					case XCB_BUTTON_RELEASE:
-						key_button_event(evt, event_type);
-						break;
-					case XCB_MAPPING_NOTIFY:
-						mapping_notify(evt);
-						break;
-					default:
-						PRINTF("received event %u\n", event_type);
-						break;
+			if (FD_ISSET(STDIN_FILENO, &descriptors)) {
+				running = false;
+			} else {
+				while ((evt = xcb_poll_for_event(dpy)) != NULL) {
+					uint8_t event_type = XCB_EVENT_RESPONSE_TYPE(evt);
+					switch (event_type) {
+						case XCB_KEY_PRESS:
+						case XCB_KEY_RELEASE:
+							key_event(evt, event_type);
+							break;
+						case XCB_MAPPING_NOTIFY:
+							mapping_notify(evt);
+							break;
+						default:
+							PRINTF("received event %u\n", event_type);
+							break;
+					}
+					free(evt);
 				}
-				free(evt);
 			}
 		}
 
@@ -211,44 +184,30 @@ int main(int argc, char *argv[])
 
 	ungrab();
 	cleanup();
-	destroy_chord(abort_chord);
 	xcb_key_symbols_free(symbols);
 	xcb_disconnect(dpy);
 	return EXIT_SUCCESS;
 }
 
-void key_button_event(xcb_generic_event_t *evt, uint8_t event_type)
+void key_event(xcb_generic_event_t *evt, uint8_t event_type)
 {
 	xcb_keysym_t keysym = XCB_NO_SYMBOL;
 	xcb_button_t button = XCB_NONE;
-	bool replay_event = false;
 	uint16_t modfield = 0;
 	uint16_t lockfield = num_lock | caps_lock | scroll_lock;
-	parse_event(evt, event_type, &keysym, &button, &modfield);
+	parse_event(evt, event_type, &keysym, &modfield);
 	modfield &= ~lockfield & MOD_STATE_FIELD;
-	if (keysym != XCB_NO_SYMBOL || button != XCB_NONE) {
-		hotkey_t *hk = find_hotkey(keysym, button, modfield, event_type, &replay_event);
-		if (hk != NULL) {
-			run(hk->command, hk->sync);
-			put_status(COMMAND_PREFIX, hk->command);
-		}
+	if (keysym == abort_keysym && event_type == XCB_KEY_RELEASE) {
+		running = false;
+	} else if (keysym != XCB_NO_SYMBOL) {
+		printf(
+			"%u %s %u\n",
+			keysym,
+			event_type == XCB_KEY_RELEASE ? "release" : "press",
+			modfield
+		);
 	}
-	switch (event_type) {
-		case XCB_BUTTON_PRESS:
-		case XCB_BUTTON_RELEASE:
-			if (replay_event)
-				xcb_allow_events(dpy, XCB_ALLOW_REPLAY_POINTER, XCB_CURRENT_TIME);
-			else
-				xcb_allow_events(dpy, XCB_ALLOW_SYNC_POINTER, XCB_CURRENT_TIME);
-			break;
-		case XCB_KEY_PRESS:
-		case XCB_KEY_RELEASE:
-			if (replay_event)
-				xcb_allow_events(dpy, XCB_ALLOW_REPLAY_KEYBOARD, XCB_CURRENT_TIME);
-			else
-				xcb_allow_events(dpy, XCB_ALLOW_SYNC_KEYBOARD, XCB_CURRENT_TIME);
-			break;
-	}
+
 	xcb_flush(dpy);
 }
 
