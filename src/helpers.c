@@ -30,7 +30,7 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include "sxhkd.h"
+#include "zkg.h"
 
 void warn(char *fmt, ...)
 {

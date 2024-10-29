@@ -51,7 +51,7 @@ char progress[3 * MAXLEN];
 int mapping_count;
 int timeout;
 
-char sxhkd_pid[MAXLEN];
+char zkg_pid[MAXLEN];
 
 hotkey_t *hotkeys_head, *hotkeys_tail;
 bool running, grabbed, toggle_grab, reload, bell, chained, locked;
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 				exit(EXIT_SUCCESS);
 				break;
 			case 'h':
-				printf("sxhkd [-h|-v|-m COUNT|-t TIMEOUT|-c CONFIG_FILE|-r REDIR_FILE|-s STATUS_FIFO|-a ABORT_KEYSYM] [EXTRA_CONFIG ...]\n");
+				printf("zkg [-h|-v|-m COUNT|-t TIMEOUT|-c CONFIG_FILE|-r REDIR_FILE|-s STATUS_FIFO|-a ABORT_KEYSYM] [EXTRA_CONFIG ...]\n");
 				exit(EXIT_SUCCESS);
 				break;
 			case 'm':
@@ -113,16 +113,6 @@ int main(int argc, char *argv[])
 
 	num_extra_confs = argc - optind;
 	extra_confs = argv + optind;
-
-	if (config_path == NULL) {
-		char *config_home = getenv(CONFIG_HOME_ENV);
-		if (config_home != NULL)
-			snprintf(config_file, sizeof(config_file), "%s/%s", config_home, CONFIG_PATH);
-		else
-			snprintf(config_file, sizeof(config_file), "%s/%s/%s", getenv("HOME"), ".config", CONFIG_PATH);
-	} else {
-		snprintf(config_file, sizeof(config_file), "%s", config_path);
-	}
 
 	if (fifo_path != NULL) {
 		int fifo_fd = open(fifo_path, O_RDWR | O_NONBLOCK);
@@ -297,14 +287,14 @@ void setup(void)
 	if (screen == NULL)
 		err("Can't acquire screen.\n");
 	root = screen->root;
-	if ((shell = getenv(SXHKD_SHELL_ENV)) == NULL && (shell = getenv(SHELL_ENV)) == NULL)
+	if ((shell = getenv(ZKG_SHELL_ENV)) == NULL && (shell = getenv(SHELL_ENV)) == NULL)
 		err("The '%s' environment variable is not defined.\n", SHELL_ENV);
 	symbols = xcb_key_symbols_alloc(dpy);
 	hotkeys_head = hotkeys_tail = NULL;
 	progress[0] = '\0';
 
-	snprintf(sxhkd_pid, MAXLEN, "%i", getpid());
-	setenv("SXHKD_PID", sxhkd_pid, 1);
+	snprintf(zkg_pid, MAXLEN, "%i", getpid());
+	setenv("ZKG_PID", zkg_pid, 1);
 }
 
 void cleanup(void)

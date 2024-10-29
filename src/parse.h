@@ -22,10 +22,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SXHKD_PARSE_H
-#define SXHKD_PARSE_H
+#ifndef ZKG_PARSE_H
+#define ZKG_PARSE_H
 
-#include "sxhkd.h"
+#include "zkg.h"
 
 #define RELEASE_PREFIX       '@'
 #define REPLAY_PREFIX        '~'

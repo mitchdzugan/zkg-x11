@@ -22,10 +22,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SXHKD_GRAB_H
-#define SXHKD_GRAB_H
+#ifndef ZKG_GRAB_H
+#define ZKG_GRAB_H
 
-#include "sxhkd.h"
+#include "zkg.h"
 
 void grab(void);
 void grab_chord(chord_t *chord);

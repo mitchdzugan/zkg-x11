@@ -22,8 +22,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SXHKD_SXHKD_H
-#define SXHKD_SXHKD_H
+#ifndef ZKG_ZKG_H
+#define ZKG_ZKG_H
 
 #include <xcb/xcb_keysyms.h>
 #include <stdio.h>
@@ -32,9 +32,8 @@
 #include "helpers.h"
 
 #define CONFIG_HOME_ENV     "XDG_CONFIG_HOME"
-#define SXHKD_SHELL_ENV     "SXHKD_SHELL"
+#define ZKG_SHELL_ENV     "ZKG_SHELL"
 #define SHELL_ENV           "SHELL"
-#define CONFIG_PATH         "sxhkd/sxhkdrc"
 #define HOTKEY_PREFIX       'H'
 #define COMMAND_PREFIX      'C'
 #define BEGIN_CHAIN_PREFIX  'B'

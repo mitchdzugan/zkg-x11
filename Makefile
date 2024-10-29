@@ -1,4 +1,4 @@
-OUT      = sxhkd
+OUT      = zkg
 VERCMD  ?= git describe --tags 2> /dev/null
 VERSION := $(shell $(VERCMD) || cat VERSION)
 
