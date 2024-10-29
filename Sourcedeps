@@ -6,5 +6,3 @@ parse.o: parse.c helpers.h locales.h parse.h zkg.h types.h
 OBJ += parse.o
 zkg.o: zkg.c grab.h helpers.h parse.h zkg.h types.h
 OBJ += zkg.o
-types.o: types.c grab.h helpers.h parse.h zkg.h types.h
-OBJ += types.o

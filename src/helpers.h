@@ -38,10 +38,5 @@
 void warn(char *fmt, ...);
 __attribute__((noreturn))
 void err(char *fmt, ...);
-void execute(char *cmd[]);
-void spawn(char *cmd[], bool sync);
-void run(char *command, bool sync);
-char *lgraph(char *s);
-char *rgraph(char *s);
 
 #endif

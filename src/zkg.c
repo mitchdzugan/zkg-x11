@@ -40,23 +40,12 @@ xcb_connection_t *dpy;
 xcb_window_t root;
 xcb_key_symbols_t *symbols;
 
-char *shell;
-char config_file[MAXLEN];
-char *config_path;
-char **extra_confs;
-int num_extra_confs;
-int redir_fd;
-FILE *status_fifo;
-char progress[3 * MAXLEN];
-int mapping_count;
 int timeout;
 
 char zkg_pid[MAXLEN];
 
-hotkey_t *hotkeys_head, *hotkeys_tail;
-bool running, grabbed, toggle_grab, reload, bell, chained, locked;
+bool running, grabbed, bell, chained, locked;
 xcb_keysym_t abort_keysym;
-chord_t *abort_chord;
 
 uint16_t num_lock;
 uint16_t caps_lock;
@@ -65,13 +54,8 @@ uint16_t scroll_lock;
 int main(int argc, char *argv[])
 {
 	int opt;
-	char *fifo_path = NULL;
-	status_fifo = NULL;
-	config_path = NULL;
-	mapping_count = 0;
 	timeout = 0;
 	grabbed = false;
-	redir_fd = -1;
 	abort_keysym = ESCAPE_KEYSYM;
 
 	while ((opt = getopt(argc, argv, "hvm:t:c:r:s:a:")) != -1) {
@@ -116,7 +100,7 @@ int main(int argc, char *argv[])
 
 	fd_set descriptors;
 
-	reload = toggle_grab = bell = chained = locked = false;
+	bell = chained = locked = false;
 	running = true;
 
 	xcb_flush(dpy);
@@ -149,22 +133,8 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		if (reload) {
-			signal(SIGUSR1, hold);
-			reload_cmd();
-			reload = false;
-		}
-
-		if (toggle_grab) {
-			signal(SIGUSR2, hold);
-			toggle_grab_cmd();
-			toggle_grab = false;
-		}
-
 		if (bell) {
 			signal(SIGALRM, hold);
-			put_status(TIMEOUT_PREFIX, "Timeout reached");
-			abort_chain();
 			bell = false;
 		}
 
@@ -174,16 +144,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (redir_fd != -1) {
-		close(redir_fd);
-	}
-
-	if (status_fifo != NULL) {
-		fclose(status_fifo);
-	}
-
 	ungrab();
-	cleanup();
 	xcb_key_symbols_free(symbols);
 	xcb_disconnect(dpy);
 	return EXIT_SUCCESS;
@@ -192,7 +153,6 @@ int main(int argc, char *argv[])
 void key_event(xcb_generic_event_t *evt, uint8_t event_type)
 {
 	xcb_keysym_t keysym = XCB_NO_SYMBOL;
-	xcb_button_t button = XCB_NONE;
 	uint16_t modfield = 0;
 	uint16_t lockfield = num_lock | caps_lock | scroll_lock;
 	parse_event(evt, event_type, &keysym, &modfield);
@@ -213,19 +173,12 @@ void key_event(xcb_generic_event_t *evt, uint8_t event_type)
 
 void mapping_notify(xcb_generic_event_t *evt)
 {
-	if (!mapping_count)
-		return;
 	xcb_mapping_notify_event_t *e = (xcb_mapping_notify_event_t *) evt;
 	PRINTF("mapping notify %u %u\n", e->request, e->count);
 	if (e->request == XCB_MAPPING_POINTER)
 		return;
 	if (xcb_refresh_keyboard_mapping(symbols, e) == 1) {
-		destroy_chord(abort_chord);
 		get_lock_fields();
-		reload_cmd();
-		abort_chord = make_chord(abort_keysym, XCB_NONE, 0, XCB_KEY_PRESS, false, false);
-		if (mapping_count > 0)
-			mapping_count--;
 	}
 }
 
@@ -246,70 +199,16 @@ void setup(void)
 	if (screen == NULL)
 		err("Can't acquire screen.\n");
 	root = screen->root;
-	if ((shell = getenv(ZKG_SHELL_ENV)) == NULL && (shell = getenv(SHELL_ENV)) == NULL)
-		err("The '%s' environment variable is not defined.\n", SHELL_ENV);
 	symbols = xcb_key_symbols_alloc(dpy);
-	hotkeys_head = hotkeys_tail = NULL;
-	progress[0] = '\0';
 
 	snprintf(zkg_pid, MAXLEN, "%i", getpid());
 	setenv("ZKG_PID", zkg_pid, 1);
 }
 
-void cleanup(void)
-{
-	PUTS("cleanup");
-	hotkey_t *hk = hotkeys_head;
-	while (hk != NULL) {
-		hotkey_t *next = hk->next;
-		destroy_chain(hk->chain);
-		free(hk->cycle);
-		free(hk);
-		hk = next;
-	}
-	hotkeys_head = hotkeys_tail = NULL;
-}
-
-void reload_cmd(void)
-{
-	PUTS("reload");
-	cleanup();
-	load_config(config_file);
-	for (int i = 0; i < num_extra_confs; i++)
-		load_config(extra_confs[i]);
-	ungrab();
-	grab();
-}
-
-void toggle_grab_cmd(void)
-{
-	PUTS("toggle grab");
-	if (grabbed) {
-		ungrab();
-	} else {
-		grab();
-	}
-}
-
 void hold(int sig)
 {
-	if (sig == SIGHUP || sig == SIGINT || sig == SIGTERM)
-		running = false;
-	else if (sig == SIGUSR1)
-		reload = true;
-	else if (sig == SIGUSR2)
-		toggle_grab = true;
-	else if (sig == SIGALRM) {
-		bell = true;
+	if (sig == SIGHUP || sig == SIGINT || sig == SIGTERM || sig == SIGALRM) {
 		running = false;
 	}
 }
 
-void put_status(char c, const char *s)
-{
-	if (status_fifo == NULL) {
-		return;
-	}
-	fprintf(status_fifo, "%c%s\n", c, s);
-	fflush(status_fifo);
-}
