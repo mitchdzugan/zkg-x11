@@ -29,12 +29,11 @@
 #define MAXLEN            256
 
 #ifdef DEBUG
-#  define PUTS(x)         puts(x)
 #  define PRINTF(x,...)   printf(x, __VA_ARGS__)
 #else
-#  define PUTS(x)         puts(x)
-#  define PRINTF(x,...)   printf(x, __VA_ARGS__)
+#  define PRINTF(x,...)   ((void)0)
 #endif
+#define PUTS(x)         PRINTF("%s\n", x)
 
 void warn(char *fmt, ...);
 __attribute__((noreturn))
