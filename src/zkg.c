@@ -166,6 +166,7 @@ void key_event(xcb_generic_event_t *evt, uint8_t event_type)
 			event_type == XCB_KEY_RELEASE ? "release" : "press",
 			modfield
 		);
+		fflush(stdout);
 	}
 
 	xcb_flush(dpy);
