@@ -30,7 +30,7 @@
 void grab(void)
 {
 	PUTS("grab");
-	xcb_grab_keyboard(dpy, false, root, XCB_CURRENT_TIME, XCB_GRAB_MODE_SYNC, XCB_GRAB_MODE_ASYNC);
+	xcb_grab_keyboard(dpy, false, root, XCB_CURRENT_TIME, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
 	xcb_flush(dpy);
 	grabbed = true;
 }
