@@ -71,7 +71,7 @@ void grab(void)
 	}
 	xcb_flush(dpy);
 	if (!did_grab) {
-		printf(stderr, "Failed to grab keyboard\n");
+		fprintf(stderr, "Failed to grab keyboard\n");
 		exit(EXIT_FAILURE);
 	}
 	grabbed = true;
