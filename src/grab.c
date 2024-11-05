@@ -22,16 +22,58 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <time.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include "parse.h"
 #include "grab.h"
 
+int msleep(long msec)
+{
+    struct timespec ts;
+    int res;
+
+    if (msec < 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ts.tv_sec = msec / 1000;
+    ts.tv_nsec = (msec % 1000) * 1000000;
+
+    do {
+        res = nanosleep(&ts, &ts);
+    } while (res && errno == EINTR);
+
+    return res;
+}
+
 void grab(void)
 {
+	xcb_grab_keyboard_cookie_t cookie;
+	xcb_grab_keyboard_reply_t *reply;
 	PUTS("grab");
-	xcb_grab_keyboard(dpy, false, root, XCB_CURRENT_TIME, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
+	int i = 0;
+	bool did_grab = false;
+	while (i < 20) {
+		cookie = xcb_grab_keyboard(dpy, false, root, XCB_CURRENT_TIME, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
+		if ((reply = xcb_grab_keyboard_reply(dpy, cookie, NULL))) {
+			did_grab = reply->status == 0;
+			PRINTF("reply->status [%i], nth: [%i]\n", reply->status, i);
+			free(reply);
+			if (did_grab) { break; }
+			xcb_flush(dpy);
+			msleep(10);
+			i++;
+		}
+	}
 	xcb_flush(dpy);
+	if (!did_grab) {
+		printf(stderr, "Failed to grab keyboard\n");
+		exit(EXIT_FAILURE);
+	}
 	grabbed = true;
 }
 

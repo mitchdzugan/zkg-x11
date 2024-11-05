@@ -29,7 +29,7 @@
 #define MAXLEN            256
 
 #ifdef DEBUG
-#  define PRINTF(x,...)   printf(x, __VA_ARGS__)
+#  define PRINTF(x,...)   fprintf(stderr, x, __VA_ARGS__)
 #else
 #  define PRINTF(x,...)   ((void)0)
 #endif
