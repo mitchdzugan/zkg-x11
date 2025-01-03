@@ -9,7 +9,8 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
       in rec {
-        packages.default = pkgs.stdenv.mkDerivation {
+        packages.default = packages.zkg-x11;
+        packages.zkg-x11 = pkgs.stdenv.mkDerivation {
           pname = "zkg-x11";
           version = "0.1";
           src = ./.;
@@ -27,7 +28,7 @@
           buildPhase = "make";
           installPhase = ''
             mkdir -p "$out/bin"
-            mv zkg "$out/bin/"
+            mv zkg "$out/bin/zkg-x11"
           '';
         };
       });
