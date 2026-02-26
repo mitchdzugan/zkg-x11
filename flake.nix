@@ -15,15 +15,15 @@
           version = "0.1";
           src = ./.;
           nativeBuildInputs = with pkgs; [
-            xorg.libxcb
-            xorg.xcbutil
-            xorg.xcbutilkeysyms
+            libxcb
+            libxcb-util
+            libxcb-keysyms
             gnumake
           ];
           propagatedBuildInputs = with pkgs; [
-            xorg.libxcb
-            xorg.xcbutil
-            xorg.xcbutilkeysyms
+            libxcb
+            libxcb-util
+            libxcb-keysyms
           ];
           buildPhase = "make";
           installPhase = ''
